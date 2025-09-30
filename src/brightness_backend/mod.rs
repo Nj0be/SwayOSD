@@ -1,6 +1,4 @@
-use self::{blight::Blight, brightnessctl::BrightnessCtl};
-
-mod blight;
+use self::{brightnessctl::BrightnessCtl};
 
 mod brightnessctl;
 
@@ -22,16 +20,13 @@ pub trait BrightnessBackend {
 	fn get_current(&mut self) -> u32;
 	fn get_max(&mut self) -> u32;
 
-	fn lower(&mut self, by: u32) -> anyhow::Result<()>;
-	fn raise(&mut self, by: u32) -> anyhow::Result<()>;
-	fn set(&mut self, val: u32) -> anyhow::Result<()>;
+	fn lower(&mut self, by: f32) -> anyhow::Result<()>;
+	fn raise(&mut self, by: f32) -> anyhow::Result<()>;
+	fn set(&mut self, val: f32) -> anyhow::Result<()>;
 }
 
 #[allow(dead_code)]
 pub fn get_preferred_backend(device_name: Option<String>) -> BrightnessBackendResult {
 	println!("Trying BrightnessCtl Backend...");
-	BrightnessCtl::try_new_boxed(device_name.clone()).or_else(|_| {
-		println!("...Command failed! Falling back to Blight");
-		Blight::try_new_boxed(device_name)
-	})
+	BrightnessCtl::try_new_boxed(device_name.clone())
 }

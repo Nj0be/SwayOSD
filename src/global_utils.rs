@@ -69,7 +69,7 @@ pub(crate) fn handle_application_args(
 			"brightness" => {
 				let value = child.value().str().unwrap_or("");
 
-				match (value, value.parse::<i8>()) {
+				match (value, value.parse::<f32>()) {
 					// Parse custom step values
 					(_, Ok(num)) => match value.get(..1) {
 						Some("+") => (ArgTypes::BrightnessRaise, Some(num.to_string())),

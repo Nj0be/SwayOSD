@@ -107,10 +107,11 @@ impl VirtualDevice {
 		}
 	}
 
-	fn set_percent(&mut self, mut val: u32) -> anyhow::Result<()> {
-		val = val.clamp(0, 100);
-		self.current = self.max.map(|max| val * max / 100);
-		let _: String = self.run(("set", &*format!("{val}%")))?;
+	fn set_percent(&mut self, mut val: f32) -> anyhow::Result<()> {
+		val = val.clamp(0.0, 100.0);
+        let current = ((val / 100.0) * self.get_max() as f32) as u32;
+        self.current = Some(current);
+        let _: String = self.run(("set", &*current.to_string()))?;
 		Ok(())
 	}
 }
@@ -132,25 +133,26 @@ impl BrightnessBackend for BrightnessCtl {
 		self.device.get_max()
 	}
 
-	fn lower(&mut self, by: u32) -> anyhow::Result<()> {
+	fn lower(&mut self, by: f32) -> anyhow::Result<()> {
 		let curr = self.get_current();
 		let max = self.get_max();
 
-		let curr = curr * 100 / max;
+        println!("curr: {} max: {}", curr, max);
+		let curr_percent = (curr as f32) * 100.0 / (max as f32);
 
-		self.device.set_percent(curr.saturating_sub(by))
+        self.device.set_percent((curr_percent - by).max(0.0))
 	}
 
-	fn raise(&mut self, by: u32) -> anyhow::Result<()> {
+	fn raise(&mut self, by: f32) -> anyhow::Result<()> {
 		let curr = self.get_current();
 		let max = self.get_max();
 
-		let curr = curr * 100 / max;
+		let curr_percent = (curr as f32) * 100.0 / (max as f32);
 
-		self.device.set_percent(curr + by)
+		self.device.set_percent(curr_percent + by)
 	}
 
-	fn set(&mut self, val: u32) -> anyhow::Result<()> {
+	fn set(&mut self, val: f32) -> anyhow::Result<()> {
 		self.device.set_percent(val)
 	}
 }

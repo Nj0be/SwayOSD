@@ -400,19 +400,19 @@ pub fn change_brightness(
 	change_type: BrightnessChangeType,
 	step: Option<String>,
 ) -> brightness_backend::BrightnessBackendResult {
-	const BRIGHTNESS_CHANGE_DELTA: u8 = 5;
-	let value = step.unwrap_or_default().parse::<u8>();
+	const BRIGHTNESS_CHANGE_DELTA: f32 = 5.0;
+	let value = step.unwrap_or_default().parse::<f32>();
 
 	let mut backend = brightness_backend::get_preferred_backend(get_device_name())?;
 
 	match change_type {
 		BrightnessChangeType::Raise => {
-			backend.raise(value.unwrap_or(BRIGHTNESS_CHANGE_DELTA) as u32)?
+			backend.raise(value.unwrap_or(BRIGHTNESS_CHANGE_DELTA) as f32)?
 		}
 		BrightnessChangeType::Lower => {
-			backend.lower(value.unwrap_or(BRIGHTNESS_CHANGE_DELTA) as u32)?
+			backend.lower(value.unwrap_or(BRIGHTNESS_CHANGE_DELTA) as f32)?
 		}
-		BrightnessChangeType::Set => backend.set(value.unwrap() as u32)?,
+		BrightnessChangeType::Set => backend.set(value.unwrap() as f32)?,
 	};
 
 	Ok(backend)

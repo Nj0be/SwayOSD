@@ -154,7 +154,7 @@ fn main() -> Result<(), glib::Error> {
 		OptionFlags::NONE,
 		OptionArg::String,
 		"Shows brightness osd and raises or loweres all available sources of brightness device",
-		Some("raise|lower|(±)number"),
+		Some("raise|lower|(±)number[.fraction]"),
 	);
 
 	// Control players cmdline arg
