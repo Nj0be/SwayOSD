@@ -260,23 +260,44 @@ pub fn change_device_volume(
 	change_type: VolumeChangeType,
 	step: Option<String>,
 ) -> Option<DeviceInfo> {
-	// Get the sink/source controller
-	let controller: &mut dyn DeviceControl<DeviceInfo> = match device_type {
-		VolumeDeviceType::Sink(controller) => controller,
-		VolumeDeviceType::Source(controller) => controller,
-	};
-
-	// Get the device
-	let device: DeviceInfo = if let Some(name) = get_device_name()
-		&& let Ok(device) = controller.get_device_by_name(&name)
-	{
-		device
-	} else {
-		match controller.get_default_device() {
-			Ok(device) => device,
-			Err(e) => {
-				eprintln!("Error getting the default device: {}", e);
-				return None;
+	let device: DeviceInfo = match device_type {
+		VolumeDeviceType::Sink(controller) => {
+			// Get the device
+			let device: DeviceInfo = if let Some(name) = get_device_name()
+				&& let Ok(device) = controller.get_device_by_name(&name)
+			{
+				device
+			} else {
+				match controller.get_default_device() {
+					Ok(device) => device,
+					Err(e) => {
+						eprintln!("Error getting the default device: {}", e);
+						return None;
+					}
+				}
+			};
+			device
+		}
+		VolumeDeviceType::Source(controller) => {
+			let server_info = controller.get_server_info();
+			let global_name = get_device_name();
+			let device_name: String = if let Some(name) = global_name {
+				name
+			} else {
+				match server_info {
+					Ok(info) => info.default_source_name.unwrap_or("".to_string()),
+					Err(e) => {
+						eprintln!("Error getting default_sink: {}, using default", e);
+						DEVICE_NAME_DEFAULT.to_string()
+					}
+				}
+			};
+			match controller.get_device_by_name(&device_name) {
+				Ok(device) => device,
+				Err(_) => {
+					eprintln!("No device with name: '{}' found!", device_name);
+					return None;
+				}
 			}
 		}
 	};
@@ -290,20 +311,46 @@ pub fn change_device_volume(
 	);
 	match change_type {
 		VolumeChangeType::Raise => {
+			// Get the sink/source controller
+			let controller: &mut dyn DeviceControl<DeviceInfo> = match device_type {
+				VolumeDeviceType::Sink(controller) => controller,
+				VolumeDeviceType::Source(controller) => controller,
+			};
 			let max_volume = volume_from_f64(get_max_volume() as f64);
 			if let Some(volume) = device.volume.clone().inc_clamp(delta, max_volume) {
 				controller.set_device_volume_by_index(device.index, volume);
 			}
 		}
 		VolumeChangeType::Lower => {
+			// Get the sink/source controller
+			let controller: &mut dyn DeviceControl<DeviceInfo> = match device_type {
+				VolumeDeviceType::Sink(controller) => controller,
+				VolumeDeviceType::Source(controller) => controller,
+			};
 			if let Some(volume) = device.volume.clone().decrease(delta) {
 				controller.set_device_volume_by_index(device.index, volume);
 			}
 		}
-		VolumeChangeType::MuteToggle => {
-			controller.set_device_mute_by_index(device.index, !device.mute);
-		}
+		VolumeChangeType::MuteToggle => match device_type {
+			VolumeDeviceType::Sink(controller) => {
+				controller.set_device_mute_by_index(device.index, !device.mute);
+			}
+			VolumeDeviceType::Source(controller) => {
+				let op = controller.handler.introspect.set_source_mute_by_index(
+					device.index,
+					!device.mute,
+					None,
+				);
+				controller.handler.wait_for_operation(op).ok();
+			}
+		},
 	}
+
+	// Get the sink/source controller
+	let controller: &mut dyn DeviceControl<DeviceInfo> = match device_type {
+		VolumeDeviceType::Sink(controller) => controller,
+		VolumeDeviceType::Source(controller) => controller,
+	};
 
 	match controller.get_device_by_index(device.index) {
 		Ok(device) => Some(device),
